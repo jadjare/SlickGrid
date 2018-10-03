@@ -48,6 +48,7 @@
     var compiledFilter;
     var compiledFilterWithCaching;
     var filterCache = [];
+    var cachedGroups = {};
 
     // grouping
     var groupingInfoDefaults = {
@@ -238,6 +239,7 @@
       }
 
       groups = [];
+      cachedGroups={};
       toggledGroupsByLevel = [];
       groupingInfo = groupingInfo || [];
       groupingInfos = (groupingInfo instanceof Array) ? groupingInfo : [groupingInfo];
@@ -540,6 +542,7 @@
     }
 
     function extractGroups(rows, parentGroup) {
+      
       var group;
       var val;
       var groups = [];
@@ -547,17 +550,37 @@
       var r;
       var level = parentGroup ? parentGroup.level + 1 : 0;
       var gi = groupingInfos[level];
+      var groupingKey;
+      
+      for(var cachedGroupkey in cachedGroups){
+        cachedGroups[cachedGroupkey].rows=[];
+        cachedGroups[cachedGroupkey].count=0;
+        cachedGroups[cachedGroupkey].title=null;
+        cachedGroups[cachedGroupkey].collapsed=false;
+        cachedGroups[cachedGroupkey].totals=null;
+        cachedGroups[cachedGroupkey].groups=null;      
+      };
 
       for (var i = 0, l = gi.predefinedValues.length; i < l; i++) {
         val = gi.predefinedValues[i];
         group = groupsByVal[val];
         if (!group) {
-          group = new Slick.Group();
+          groupingKey = (parentGroup ? parentGroup.groupingKey + groupingDelimiter : '') + val;
+          if(cachedGroups[groupingKey + '-' + i]===undefined){
+            group=new Slick.Group();
+            cachedGroups[groupingKey + '-' + i] = group
+          } else {
+            group = cachedGroups[groupingKey + '-' + i]
+            
+          }
+          
           group.value = val;
           group.level = level;
-          group.groupingKey = (parentGroup ? parentGroup.groupingKey + groupingDelimiter : '') + val;
+          group.groupingKey = groupingKey
           groups[groups.length] = group;
           groupsByVal[val] = group;
+
+          
         }
       }
 
@@ -566,10 +589,17 @@
         val = gi.getterIsAFn ? gi.getter(r) : r[gi.getter];
         group = groupsByVal[val];
         if (!group) {
-          group = new Slick.Group();
+          groupingKey = (parentGroup ? parentGroup.groupingKey + groupingDelimiter : '') + val;
+          if(cachedGroups[groupingKey + '-' + i]===undefined){
+            group=new Slick.Group();
+            cachedGroups[groupingKey + '-' + i] = group
+          } else {
+            group = cachedGroups[groupingKey + '-' + i]
+            
+          }
           group.value = val;
           group.level = level;
-          group.groupingKey = (parentGroup ? parentGroup.groupingKey + groupingDelimiter : '') + val;
+          group.groupingKey = groupingKey;
           groups[groups.length] = group;
           groupsByVal[val] = group;
         }
@@ -585,7 +615,7 @@
       }      
 
       groups.sort(groupingInfos[level].comparer);
-
+      
       return groups;
     }
 
